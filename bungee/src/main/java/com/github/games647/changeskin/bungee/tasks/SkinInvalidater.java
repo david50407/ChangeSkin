@@ -27,7 +27,10 @@ public class SkinInvalidater implements Runnable {
             plugin.sendMessage(invoker, "invalidate-request");
 
             SkinData skin = plugin.getCore().downloadSkin(ownedSkin.getUuid());
-            plugin.getCore().getUuidCache().put(skin.getName(), skin.getUuid());
+            if (skin != null) {
+                plugin.getCore().getUuidCache().put(skin.getName(), skin.getUuid());
+            }
+            
             ProxyServer.getInstance().getScheduler().runAsync(plugin, new SkinUpdater(plugin, invoker, invoker, skin));
         }
     }

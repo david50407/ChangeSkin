@@ -22,11 +22,11 @@ public class UserPreferences {
         return uuid;
     }
 
-    public SkinData getTargetSkin() {
+    public synchronized SkinData getTargetSkin() {
         return targetSkin;
     }
 
-    public void setTargetSkin(SkinData targetSkin) {
+    public synchronized void setTargetSkin(SkinData targetSkin) {
         this.targetSkin = targetSkin;
     }
 }

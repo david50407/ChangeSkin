@@ -11,12 +11,8 @@ import java.util.logging.Level;
 
 import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.connection.PendingConnection;
 import net.md_5.bungee.api.event.AsyncEvent;
-import net.md_5.bungee.api.event.LoginEvent;
 import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.event.EventHandler;
-import net.md_5.bungee.event.EventPriority;
 
 public class PreLoginListener implements Listener {
 
@@ -26,22 +22,22 @@ public class PreLoginListener implements Listener {
         this.plugin = changeSkinBungee;
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onPlayerLogin(LoginEvent loginEvent) {
-        if (loginEvent.isCancelled()) {
-            return;
-        }
-
-        PendingConnection connection = loginEvent.getConnection();
-        UUID playerUuid = connection.getUniqueId();
-        String playerName = connection.getName();
-
-        UserPreferences preferences = plugin.getStorage().getPreferences(playerUuid);
-        plugin.getCore().startSession(playerUuid, preferences);
-        if (preferences.getTargetSkin() == null && plugin.getConfiguration().getBoolean("restoreSkins")) {
-            refetchSkin(preferences, playerName, loginEvent);
-        }
-    }
+//    @EventHandler(priority = EventPriority.HIGH)
+//    public void onPlayerLogin(LoginEvent loginEvent) {
+//        if (loginEvent.isCancelled()) {
+//            return;
+//        }
+//
+//        PendingConnection connection = loginEvent.getConnection();
+//        UUID playerUuid = connection.getUniqueId();
+//        String playerName = connection.getName();
+//
+//        UserPreferences preferences = plugin.getStorage().getPreferences(playerUuid);
+//        plugin.getCore().startSession(playerUuid, preferences);
+//        if (preferences.getTargetSkin() == null && plugin.getConfiguration().getBoolean("restoreSkins")) {
+//            refetchSkin(preferences, playerName, loginEvent);
+//        }
+//    }
 
      private void refetchSkin(final UserPreferences prefereces, final String playerName
              , final AsyncEvent<?> preLoginEvent) {

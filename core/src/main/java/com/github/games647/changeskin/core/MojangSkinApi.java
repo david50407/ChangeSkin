@@ -30,10 +30,7 @@ public class MojangSkinApi {
     private static final String CHANGE_SKIN_URL = "https://api.mojang.com/user/profile/<uuid>/skin";
 
     private static final String UUID_URL = "https://api.mojang.com/users/profiles/minecraft/";
-//    private static final String MCAPI_UUID_URL = "https://mcapi.de/api/user/";
-//    private static final String MCAPI_UUID_URL = "https://us.mc-api.net/v3/uuid/";
     private static final String MCAPI_UUID_URL = "https://mcapi.ca/uuid/player/";
-//    private static final String MCAPI_UUID_URL = "https://craftapi.com/api/user/uuid/";
 
     private static final int RATE_LIMIT_ID = 429;
     private static final String USER_AGENT = "ChangeSkin-Bukkit-Plugin";
@@ -62,9 +59,10 @@ public class MojangSkinApi {
             return getUUIDFromAPI(playerName);
         }
 
+        requests.put(new Object(), new Object());
+
         Closer closer = Closer.create();
         try {
-            requests.put(new Object(), new Object());
             HttpURLConnection httpConnection = (HttpURLConnection) new URL(UUID_URL + playerName).openConnection();
             httpConnection.addRequestProperty("Content-Type", "application/json");
             httpConnection.setRequestProperty("User-Agent", USER_AGENT);
@@ -98,7 +96,7 @@ public class MojangSkinApi {
         return null;
     }
 
-    public UUID getUUIDFromAPI(String playerName) throws NotPremiumException, RateLimitException {
+    public UUID getUUIDFromAPI(String playerName) throws NotPremiumException {
         InputStreamReader inputReader = null;
         try {
             HttpURLConnection httpConnection = (HttpURLConnection) new URL(MCAPI_UUID_URL + playerName).openConnection();
@@ -109,6 +107,10 @@ public class MojangSkinApi {
             if (line != null && !line.equals("null")) {
                 PlayerProfile playerProfile = gson.fromJson(line, PlayerProfile[].class)[0];
                 String id = playerProfile.getId();
+                if (id == null || id.equalsIgnoreCase("null")) {
+                    throw new NotPremiumException(line);
+                }
+
                 return ChangeSkinCore.parseId(id);
             }
         } catch (IOException | JsonParseException ex) {

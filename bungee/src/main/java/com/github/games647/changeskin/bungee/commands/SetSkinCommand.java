@@ -25,7 +25,7 @@ public class SetSkinCommand extends Command {
 
     @Override
     public void execute(CommandSender sender, String[] args) {
-        if (sender instanceof ProxiedPlayer && plugin.isCooldown(((ProxiedPlayer) sender).getUniqueId())) {
+        if (sender instanceof ProxiedPlayer && plugin.getCore().isCooldown(((ProxiedPlayer) sender).getUniqueId())) {
             plugin.sendMessage(sender, "cooldown");
             return;
         }

@@ -68,6 +68,7 @@ public class SkinStorage {
 
             String createPreferencesStmt = "CREATE TABLE IF NOT EXISTS " + PREFERENCES_TABLE + " ("
                     + "`UserID` UNSIGNED INTEGER PRIMARY KEY AUTO_INCREMENT, "
+                    + "`DisplayName` VARCHAR(255), "
                     + "`UUID` CHAR(36) NOT NULL, "
                     + "`TargetSkin` INTEGER NOT NULL, "
                     + "UNIQUE (`UUID`), "

@@ -75,6 +75,15 @@ server-blacklist: []
 # server will verify if the user has the permissions on the backend server too.
 bukkit-permissions: false
 
+#
+#
+# UUID of the account owner:
+# Example:
+# upload-accounts:
+#     - 069a79f444e94726a5befca90e38aaf5:abcdefghijklmnopqrstufvxyz012345
+#     - 61699b2ed3274a019f1e0ea8c3f06bc6:012345abcdefghijklmnopqrstufvxyz
+upload-accounts: []
+
 # Database configuration
 # Warning: If you use BungeeCord, you should switch to MySQL, because BungeeCord has only a driver for MySQL
 storage:

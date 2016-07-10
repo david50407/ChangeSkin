@@ -1,25 +1,25 @@
 package com.github.games647.changeskin.bukkit;
 
-import com.comphenix.protocol.utility.SafeCacheBuilder;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.github.games647.changeskin.bukkit.commands.SetSkinCommand;
 import com.github.games647.changeskin.bukkit.commands.SkinInvalidateCommand;
+import com.github.games647.changeskin.bukkit.commands.SkinNameCommand;
+import com.github.games647.changeskin.bukkit.commands.SkinSelectCommand;
+import com.github.games647.changeskin.bukkit.commands.SkinUploadCommand;
 import com.github.games647.changeskin.bukkit.listener.AsyncPlayerLoginListener;
 import com.github.games647.changeskin.bukkit.listener.BungeeCordListener;
 import com.github.games647.changeskin.bukkit.listener.PlayerLoginListener;
 import com.github.games647.changeskin.bukkit.tasks.SkinUpdater;
 import com.github.games647.changeskin.core.ChangeSkinCore;
-import com.github.games647.changeskin.core.model.SkinData;
 import com.github.games647.changeskin.core.SkinStorage;
+import com.github.games647.changeskin.core.model.SkinData;
 import com.github.games647.changeskin.core.model.UserPreference;
 import com.google.common.base.Charsets;
-import com.google.common.cache.CacheLoader;
 
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -35,8 +35,7 @@ public class ChangeSkinBukkit extends JavaPlugin {
 
     protected ChangeSkinCore core;
 
-    private ConcurrentMap<UUID, Object> cooldowns;
-    private final ConcurrentMap<UUID, UserPreference> loginSessions = buildCache(2 * 60, -1);
+    private final ConcurrentMap<UUID, UserPreference> loginSessions = ChangeSkinCore.buildCache(2 * 60, -1);
 
     @Override
     public void onEnable() {
@@ -46,9 +45,7 @@ public class ChangeSkinBukkit extends JavaPlugin {
             getLogger().warning("Cannot check bungeecord support. You use a non-spigot build");
         }
 
-        getCommand("setskin").setExecutor(new SetSkinCommand(this));
-        getCommand("skinupdate").setExecutor(new SkinInvalidateCommand(this));
-
+        registerCommands();
         if (bungeeCord) {
             getLogger().info("BungeeCord detected. Activating BungeeCord support");
             getLogger().info("Make sure you installed the plugin on BungeeCord too");
@@ -63,8 +60,6 @@ public class ChangeSkinBukkit extends JavaPlugin {
                 cooldown = 1;
             }
 
-            cooldowns = buildCache(cooldown, -1);
-
             String driver = getConfig().getString("storage.driver");
             String host = getConfig().getString("storage.host", "");
             int port = getConfig().getInt("storage.port", 3306);
@@ -75,7 +70,7 @@ public class ChangeSkinBukkit extends JavaPlugin {
 
             int rateLimit = getConfig().getInt("mojang-request-limit");
             boolean mojangDownload = getConfig().getBoolean("independent-skin-downloading");
-            this.core = new ChangeSkinCore(getLogger(), getDataFolder(), rateLimit, mojangDownload);
+            this.core = new ChangeSkinCore(getLogger(), getDataFolder(), rateLimit, mojangDownload, cooldown);
 
             SkinStorage storage = new SkinStorage(core, driver, host, port, database, username, password);
             core.setStorage(storage);
@@ -96,17 +91,17 @@ public class ChangeSkinBukkit extends JavaPlugin {
         }
     }
 
+    private void registerCommands() {
+        getCommand("setskin").setExecutor(new SetSkinCommand(this));
+        getCommand("skinupdate").setExecutor(new SkinInvalidateCommand(this));
+        getCommand("skinname").setExecutor(new SkinNameCommand(this));
+        getCommand("skinselect").setExecutor(new SkinSelectCommand(this));
+        getCommand("skinupload").setExecutor(new SkinUploadCommand(this));
+    }
+
     public WrappedSignedProperty convertToProperty(SkinData skinData) {
-        return WrappedSignedProperty.fromValues(ChangeSkinCore.SKIN_KEY, skinData.getEncodedData()
-                , skinData.getEncodedSignature());
-    }
-
-    public void addCooldown(UUID invoker) {
-        cooldowns.put(invoker, new Object());
-    }
-
-    public boolean isCooldown(UUID invoker) {
-        return cooldowns.containsKey(invoker);
+        return WrappedSignedProperty.fromValues(ChangeSkinCore.SKIN_KEY
+                , skinData.getEncodedData(), skinData.getEncodedSignature());
     }
 
     public ChangeSkinCore getCore() {
@@ -141,7 +136,7 @@ public class ChangeSkinBukkit extends JavaPlugin {
     }
 
     //you should call this method async
-    public void setSkin(Player player, final SkinData newSkin, boolean applyNow) {
+    public void setSkin(Player player, SkinData newSkin, boolean applyNow) {
         new SkinUpdater(this, null, player, newSkin).run();
     }
 
@@ -181,14 +176,13 @@ public class ChangeSkinBukkit extends JavaPlugin {
     }
 
     private void loadLocale() {
-        File messageFile = new File(getDataFolder(), "messages.yml");
-        if (!messageFile.exists()) {
-            saveResource("messages.yml", false);
-        }
+        saveDefaultFile("messages.yml");
+        saveDefaultFile("messages_ru.yml");
 
         InputStreamReader defaultReader = new InputStreamReader(getResource("messages.yml"), Charsets.UTF_8);
         YamlConfiguration defaults = YamlConfiguration.loadConfiguration(defaultReader);
 
+        File messageFile = new File(getDataFolder(), "messages.yml");
         YamlConfiguration messageConfig = YamlConfiguration.loadConfiguration(messageFile);
         messageConfig.setDefaults(defaults);
 
@@ -204,23 +198,10 @@ public class ChangeSkinBukkit extends JavaPlugin {
         return bungeeCord;
     }
 
-    private <K, V> ConcurrentMap<K, V> buildCache(int seconds, int maxSize) {
-        SafeCacheBuilder<Object, Object> builder = SafeCacheBuilder.newBuilder();
-
-        if (seconds > 0) {
-            builder.expireAfterWrite(seconds, TimeUnit.SECONDS);
+    private void saveDefaultFile(String file) {
+        File messageFile = new File(getDataFolder(), file);
+        if (!messageFile.exists()) {
+            saveResource(file, false);
         }
-
-        if (maxSize > 0) {
-            builder.maximumSize(maxSize);
-        }
-
-        return builder
-                .build(new CacheLoader<K, V>() {
-                    @Override
-                    public V load(K key) throws Exception {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
     }
 }

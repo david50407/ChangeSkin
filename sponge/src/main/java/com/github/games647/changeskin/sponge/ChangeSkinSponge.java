@@ -4,8 +4,6 @@ import com.github.games647.changeskin.core.ChangeSkinCore;
 import com.github.games647.changeskin.core.SkinStorage;
 import com.github.games647.changeskin.sponge.commands.SetSkinCommand;
 import com.github.games647.changeskin.sponge.commands.SkinInvalidateCommand;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.google.inject.Inject;
@@ -16,7 +14,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.yaml.YAMLConfigurationLoader;
@@ -28,7 +25,6 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.DefaultConfig;
-import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
@@ -38,7 +34,7 @@ import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.serializer.TextSerializers;
 
-@Plugin(id = "changeskin", name = "ChangeSkin", version = "1.10"
+@Plugin(id = "changeskin", name = "ChangeSkin", version = "2.0"
         , url = "https://github.com/games647/ChangeSkin"
         , description = "Sponge plugin to change your skin server side")
 public class ChangeSkinSponge {
@@ -52,7 +48,6 @@ public class ChangeSkinSponge {
     private final Game game;
     private final PluginContainer pluginContainer;
 
-    private Cache<UUID, Object> cooldowns;
     private ChangeSkinCore core;
     private ConfigurationNode rootNode;
 
@@ -99,12 +94,13 @@ public class ChangeSkinSponge {
             String user = storageNode.getNode("username").getString();
             String pass = storageNode.getNode("password").getString();
 
+            int cooldown = rootNode.getNode("cooldown").getInt();
             int rateLimit = storageNode.getNode("mojang-request-limit").getInt();
             boolean mojangDownload = storageNode.getNode("independent-skin-downloading").getBoolean();
 
             java.util.logging.Logger pluginLogger = java.util.logging.Logger.getLogger("ChangeSkin");
 
-            core = new ChangeSkinCore(pluginLogger, defaultConfigFile.getParentFile(), rateLimit, mojangDownload);
+            core = new ChangeSkinCore(pluginLogger, defaultConfigFile.getParentFile(), rateLimit, mojangDownload, cooldown);
             SkinStorage storage = new SkinStorage(core, driver, host, port, database, user, pass);
             core.setStorage(storage);
 
@@ -122,9 +118,6 @@ public class ChangeSkinSponge {
 
             core.loadDefaultSkins(defaultSkins);
             loadLocale();
-
-            int cooldown = rootNode.getNode("cooldown").getInt();
-            cooldowns = CacheBuilder.newBuilder().expireAfterWrite(cooldown, TimeUnit.SECONDS).build();
         } catch (IOException ioEx) {
             logger.error("Failed to load config", ioEx);
         }
@@ -195,14 +188,6 @@ public class ChangeSkinSponge {
         return rootNode;
     }
 
-    public boolean isCooldown(CommandSource sender) {
-        if (sender instanceof Player) {
-            return cooldowns.asMap().containsKey(((Player) sender).getUniqueId());
-        }
-
-        return false;
-    }
-
     public boolean checkPermission(CommandSource invoker, UUID uuid, boolean sendMessage) {
         if (invoker.hasPermission(pluginContainer.getId().toLowerCase() + ".skin.whitelist." + uuid.toString())) {
             return true;
@@ -224,12 +209,6 @@ public class ChangeSkinSponge {
         String message = core.getMessage(key);
         if (message != null && sender != null) {
             sender.sendMessage(TextSerializers.LEGACY_FORMATTING_CODE.deserialize(message.replace('&', '§')));
-        }
-    }
-
-    public void addCooldown(CommandSource sender) {
-        if (sender instanceof Player) {
-            cooldowns.put(((Player) sender).getUniqueId(), new Object());
         }
     }
 

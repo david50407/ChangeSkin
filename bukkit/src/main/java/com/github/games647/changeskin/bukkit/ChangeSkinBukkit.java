@@ -53,8 +53,6 @@ public class ChangeSkinBukkit extends JavaPlugin {
             getServer().getMessenger().registerOutgoingPluginChannel(this, getName());
             getServer().getMessenger().registerIncomingPluginChannel(this, getName(), new BungeeCordListener(this));
         } else {
-            saveDefaultConfig();
-
             int cooldown = getConfig().getInt("cooldown");
             if (cooldown <= 1) {
                 cooldown = 1;

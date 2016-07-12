@@ -39,6 +39,8 @@ public class MojangSkinApi {
     private static final String UUID_URL = "https://api.mojang.com/users/profiles/minecraft/";
     private static final String MCAPI_UUID_URL = "https://mcapi.ca/uuid/player/";
 
+    private static final String VALID_USERNAME = "^\\w{2,16}$";
+
     private static final int RATE_LIMIT_ID = 429;
 
     private final Gson gson = new Gson();
@@ -65,6 +67,9 @@ public class MojangSkinApi {
 
     public UUID getUUID(String playerName) throws NotPremiumException, RateLimitException {
         logger.log(Level.FINE, "Making UUID->Name request for {0}", playerName);
+        if (!playerName.matches(VALID_USERNAME)) {
+            return null;
+        }
 
         if (requests.size() >= rateLimit || System.currentTimeMillis() - lastRateLimit < 1_000 * 60 * 10) {
 //            logger.fine("STILL WAITING FOR RATE_LIMIT - TRYING SECOND API");
@@ -185,7 +190,7 @@ public class MojangSkinApi {
             }
         } catch (IOException | JsonParseException ex) {
             logger.log(Level.SEVERE, "Tried downloading skin data from Mojang", ex);
-        } 
+        }
 
         return null;
     }
